@@ -1,5 +1,5 @@
 name: TF-WorldEdit
-version: 1.0.0
+version: 2.0.0
 main: me.totalfreedom.worldedit.TFWorldEditExtension
 api-version: '1.21'
 depend: [WorldEdit]
