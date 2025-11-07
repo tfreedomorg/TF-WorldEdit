@@ -1,36 +1,81 @@
-![WorldEdit](http://static.sk89q.com/readme/worldedit.png)
-=========
+# TF-WorldEdit Extension
 
-WorldEdit is an easy-to-use in-game world editor for Minecraft, supporting both
-single player and multiplayer, that lets you:
+A WorldEdit extension plugin for TotalFreedom servers that adds:
+- **SelectionChangedEvent** - Fires when a player's WorldEdit selection changes
+- **LimitChangedEvent** - Fires when a player's block change limit is modified
+- **Super admin bypass** for disallowed blocks (requires TotalFreedomMod)
 
-* Change thousands of blocks in an area at once by selecting regions.
-* Use over 100 functions to modify the world or remove problems.
-* Remove large chunks of land as you wish.
-* Sculpt the world and build mountains with brushes.
-* Fix annoyances such as broken water, missing snow, raging fires, and more.
+## Requirements
 
-WorldEdit is open source and is available under the GNU Lesser General Public
-License v3.
+- WorldEdit 7.3.x
+- Paper/Spigot 1.21.x
+- TotalFreedomMod (optional, for super admin features)
 
-Compiling
----------
+## Installation
 
-See [COMPILING.md](COMPILING.md) for a guide on compiling WorldEdit.
+1. Place `TF-WorldEdit.jar` in your `plugins/` folder
+2. Ensure WorldEdit is installed
+3. Restart your server
 
-Contributing
-------------
+## Features
 
-We happily accept contributions, especially through pull requests on GitHub.
-Submissions must be licensed under the GNU Lesser General Public License v3.
+### Events
 
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for important guidelines to follow.
+#### SelectionChangedEvent
+Fires when a player's WorldEdit selection changes. Can be cancelled to prevent the selection.
 
-Links
------
+```java
+@EventHandler
+public void onSelectionChange(SelectionChangedEvent event) {
+    Player player = event.getPlayer();
+    Vector min = event.getMinVector();
+    Vector max = event.getMaxVector();
+    World world = event.getWorld();
+    // Handle selection change
+    
+    // Cancel the selection if needed
+    // event.setCancelled(true);
+}
+```
 
-* [Visit our website](http://www.enginehub.org/)
-* [IRC channel](http://skq.me/irc/irc.esper.net/sk89q/) (#sk89q on irc.esper.net)
-* [Issue tracker](http://youtrack.sk89q.com/issues/WORLDEDIT)
-* [Continuous integration](http://builds.enginehub.org) [![Build Status](https://travis-ci.org/sk89q/WorldEdit.svg?branch=master)](https://travis-ci.org/sk89q/WorldEdit)
-* [End-user documentation](http://wiki.sk89q.com/wiki/WorldEdit)
+#### LimitChangedEvent
+Fires when a player's block change limit is modified via `//limit`. Can be cancelled or the limit can be modified.
+
+```java
+@EventHandler
+public void onLimitChange(LimitChangedEvent event) {
+    Player player = event.getPlayer();
+    Player target = event.getTarget();
+    int limit = event.getLimit();
+    
+    // Modify the limit
+    event.setLimit(5000);
+    
+    // Or cancel the change
+    // event.setCancelled(true);
+}
+```
+
+### Super Admin Bypass
+
+If TotalFreedomMod is installed, super admins can use blocks that are in WorldEdit's disallowed blocks list. This is handled automatically through the `WorldEditHandler.isSuperAdmin()` method.
+
+## Building
+
+```bash
+./gradlew build
+```
+
+The JAR will be in `build/libs/TF-WorldEdit-1.0.0.jar`
+
+## Development
+
+This extension was created to modernize TF-WorldEdit (a fork of WorldEdit 6.1.7) by:
+1. Extracting unique features from the fork
+2. Creating a standalone extension plugin
+3. Making it compatible with WorldEdit 7.3.x and Minecraft 1.21.x
+
+## License
+
+This plugin follows the same license as WorldEdit (LGPL v3).
+

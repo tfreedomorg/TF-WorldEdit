@@ -1,0 +1,10 @@
+name: TF-WorldEdit
+version: 1.0.0
+main: me.totalfreedom.worldedit.TFWorldEditExtension
+api-version: '1.21'
+depend: [WorldEdit]
+softdepend: [TotalFreedomMod]
+
+description: TotalFreedom WorldEdit Extension - Adds events and super admin features
+author: TotalFreedom
+
