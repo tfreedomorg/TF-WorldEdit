@@ -10,6 +10,7 @@ public class TFWorldEditExtension extends JavaPlugin {
     private static TFWorldEditExtension instance;
     private SelectionChangeListener selectionListener;
     private LimitCommandInterceptor limitInterceptor;
+    private WorldEditOperationInterceptor operationInterceptor;
     private boolean worldEditReady = false;
     
     @Override
@@ -59,6 +60,10 @@ public class TFWorldEditExtension extends JavaPlugin {
         limitInterceptor = new LimitCommandInterceptor(this);
         limitInterceptor.register();
         
+        // Register operation interceptor
+        operationInterceptor = new WorldEditOperationInterceptor(this);
+        operationInterceptor.register();
+        
         getLogger().info("TF-WorldEdit Extension enabled!");
     }
     
@@ -69,6 +74,9 @@ public class TFWorldEditExtension extends JavaPlugin {
         }
         if (limitInterceptor != null) {
             limitInterceptor.unregister();
+        }
+        if (operationInterceptor != null) {
+            operationInterceptor.unregister();
         }
         
         instance = null;

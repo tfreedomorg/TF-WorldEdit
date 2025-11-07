@@ -3,6 +3,7 @@
 A WorldEdit extension plugin for TotalFreedom servers that adds:
 - **SelectionChangedEvent** - Fires when a player's WorldEdit selection changes
 - **LimitChangedEvent** - Fires when a player's block change limit is modified
+- **WorldEditOperationEvent** - Fires before WorldEdit operations execute (e.g., //set, //replace, //fill)
 - **Super admin bypass** for disallowed blocks (requires TotalFreedomMod)
 
 ## Requirements
@@ -56,6 +57,29 @@ public void onLimitChange(LimitChangedEvent event) {
 }
 ```
 
+#### WorldEditOperationEvent
+Fires before a WorldEdit operation executes (e.g., //set, //replace, //fill). Can be cancelled to prevent the operation.
+
+**Important:** This event intercepts at the command level. For comprehensive protection, you may also need to listen to `BlockBreakEvent` and `BlockPlaceEvent` at the Bukkit level, as some WorldEdit operations may bypass command events.
+
+```java
+@EventHandler
+public void onWorldEditOperation(WorldEditOperationEvent event) {
+    Player player = event.getPlayer();
+    World world = event.getWorld();
+    Vector min = event.getMinVector();
+    Vector max = event.getMaxVector();
+    WorldEditOperationEvent.OperationType type = event.getOperationType();
+    String command = event.getCommand();
+    
+    // Check if operation is in a protected area
+    if (isInProtectedArea(world, min, max)) {
+        event.setCancelled(true);
+        player.sendMessage("§cYou cannot perform WorldEdit operations in this area.");
+    }
+}
+```
+
 ### Super Admin Bypass
 
 If TotalFreedomMod is installed, super admins can use blocks that are in WorldEdit's disallowed blocks list. This is handled automatically through the `WorldEditHandler.isSuperAdmin()` method.
@@ -66,7 +90,7 @@ If TotalFreedomMod is installed, super admins can use blocks that are in WorldEd
 ./gradlew build
 ```
 
-The JAR will be in `build/libs/TF-WorldEdit-1.0.0.jar`
+The JAR will be in `build/libs/TF-WorldEdit-2.0.0.jar`
 
 ## Development
 
