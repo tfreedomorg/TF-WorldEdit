@@ -53,41 +53,68 @@ public class SelectionChangeListener {
     private void checkSelections() {
         SessionManager sessionManager = WorldEdit.getInstance().getSessionManager();
         
-        for (com.sk89q.worldedit.extension.platform.Actor actor : sessionManager.getAll()) {
-            if (!(actor instanceof Player)) {
-                continue;
-            }
-            
-            Player wePlayer = (Player) actor;
-            UUID uuid = wePlayer.getUniqueId();
-            
+        // Get all online Bukkit players and check their sessions
+        for (org.bukkit.entity.Player bukkitPlayer : Bukkit.getOnlinePlayers()) {
             try {
-                Region region = sessionManager
-                        .get(wePlayer)
-                        .getSelection(wePlayer.getWorld());
-                
-                RegionSnapshot current = new RegionSnapshot(
-                        region.getMinimumPoint(),
-                        region.getMaximumPoint()
-                );
-                
-                RegionSnapshot last = lastSelections.get(uuid);
-                
-                if (last == null || !last.equals(current)) {
-                    // Selection changed
-                    lastSelections.put(uuid, current);
-                    WorldEditHandler.selectionChanged(wePlayer);
-                }
-            } catch (IncompleteRegionException e) {
-                // No selection, remove from tracking
-                if (lastSelections.remove(uuid) != null) {
-                    // Selection was cleared - fire event with null region
-                    // We'll handle this in the handler
-                    try {
-                        WorldEditHandler.selectionChanged(wePlayer);
-                    } catch (Exception ex) {
-                        // Ignore - selection is incomplete
+                // Convert Bukkit Player to WorldEdit Player
+                // Use WorldEdit's platform manager to get the player
+                Player wePlayer = null;
+                try {
+                    // Get the Bukkit platform and use it to match the player
+                    com.sk89q.worldedit.extension.platform.Platform platform = WorldEdit.getInstance()
+                            .getPlatformManager()
+                            .getPlatforms()
+                            .stream()
+                            .filter(p -> p.getConfiguration() != null)
+                            .findFirst()
+                            .orElse(null);
+                    
+                    // Use WorldEdit plugin instance to wrap the player
+                    org.bukkit.plugin.Plugin wePlugin = Bukkit.getPluginManager().getPlugin("WorldEdit");
+                    if (wePlugin instanceof com.sk89q.worldedit.bukkit.WorldEditPlugin) {
+                        com.sk89q.worldedit.bukkit.WorldEditPlugin weBukkitPlugin = 
+                                (com.sk89q.worldedit.bukkit.WorldEditPlugin) wePlugin;
+                        wePlayer = weBukkitPlugin.wrapPlayer(bukkitPlayer);
                     }
+                } catch (Exception e) {
+                    // Ignore - can't convert player
+                }
+                
+                if (wePlayer == null) {
+                    continue;
+                }
+                
+                UUID uuid = wePlayer.getUniqueId();
+                
+                try {
+                    Region region = sessionManager
+                            .get(wePlayer)
+                            .getSelection(wePlayer.getWorld());
+                    
+                    RegionSnapshot current = new RegionSnapshot(
+                            region.getMinimumPoint(),
+                            region.getMaximumPoint()
+                    );
+                    
+                    RegionSnapshot last = lastSelections.get(uuid);
+                    
+                    if (last == null || !last.equals(current)) {
+                        // Selection changed
+                        lastSelections.put(uuid, current);
+                        WorldEditHandler.selectionChanged(wePlayer);
+                    }
+                } catch (IncompleteRegionException e) {
+                    // No selection, remove from tracking
+                    if (lastSelections.remove(uuid) != null) {
+                        // Selection was cleared - fire event
+                        try {
+                            WorldEditHandler.selectionChanged(wePlayer);
+                        } catch (Exception ex) {
+                            // Ignore - selection is incomplete
+                        }
+                    }
+                } catch (Exception e) {
+                    // Ignore errors for individual players
                 }
             } catch (Exception e) {
                 // Ignore errors for individual players
@@ -96,10 +123,10 @@ public class SelectionChangeListener {
     }
     
     private static class RegionSnapshot {
-        private final com.sk89q.worldedit.Vector min;
-        private final com.sk89q.worldedit.Vector max;
+        private final com.sk89q.worldedit.math.BlockVector3 min;
+        private final com.sk89q.worldedit.math.BlockVector3 max;
         
-        public RegionSnapshot(com.sk89q.worldedit.Vector min, com.sk89q.worldedit.Vector max) {
+        public RegionSnapshot(com.sk89q.worldedit.math.BlockVector3 min, com.sk89q.worldedit.math.BlockVector3 max) {
             this.min = min;
             this.max = max;
         }

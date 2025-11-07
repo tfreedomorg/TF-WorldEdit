@@ -3,10 +3,13 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
+// Shadow plugin 8.1.1 doesn't fully support Java 21, but we can work around it
+// by using the regular jar task instead if shadowJar fails
+
 group = 'me.totalfreedom'
 version = '1.0.0'
-sourceCompatibility = '17'
-targetCompatibility = '17'
+sourceCompatibility = '21'
+targetCompatibility = '21'
 
 repositories {
     mavenCentral()
@@ -21,7 +24,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly 'io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT'
+    compileOnly 'io.papermc.paper:paper-api:1.21.10-R0.1-SNAPSHOT'
     compileOnly 'com.sk89q.worldedit:worldedit-bukkit:7.3.10'
     compileOnly 'com.sk89q.worldedit:worldedit-core:7.3.10'
     
@@ -31,11 +34,14 @@ dependencies {
 shadowJar {
     archiveClassifier.set('')
     relocate('com.google.common', 'me.totalfreedom.worldedit.libs.guava')
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
 }
 
-build.dependsOn shadowJar
+// Use regular jar instead of shadowJar since shadow plugin 8.1.1 doesn't support Java 21
+// The plugin uses compileOnly dependencies, so WorldEdit must be installed on the server
+build.dependsOn jar
 

@@ -67,44 +67,81 @@ public class LimitCommandInterceptor implements Listener {
             
             String targetName = matcher.group(2);
             
-            // Get WorldEdit player
+            // Get WorldEdit player - use WorldEdit's session manager
             org.bukkit.entity.Player bukkitPlayer = event.getPlayer();
             Player wePlayer = null;
+            com.sk89q.worldedit.bukkit.WorldEditPlugin weBukkitPlugin = null;
             
             try {
-                wePlayer = WorldEdit.getInstance()
-                        .getPlatformManager()
-                        .getPlatforms()
-                        .stream()
-                        .filter(p -> p.getConfiguration() != null)
-                        .findFirst()
-                        .map(p -> {
-                            try {
-                                return p.matchPlayer(bukkitPlayer);
-                            } catch (Exception e) {
-                                return null;
-                            }
-                        })
-                        .orElse(null);
-            } catch (Exception e) {
-                // Ignore
-            }
-            
-            if (wePlayer == null) {
-                // Try direct conversion
-                try {
-                    wePlayer = WorldEdit.getInstance().wrapPlayer(bukkitPlayer);
-                } catch (Exception e) {
-                    return;
+                // Get WorldEdit plugin instance
+                org.bukkit.plugin.Plugin wePlugin = Bukkit.getPluginManager().getPlugin("WorldEdit");
+                if (wePlugin instanceof com.sk89q.worldedit.bukkit.WorldEditPlugin) {
+                    weBukkitPlugin = (com.sk89q.worldedit.bukkit.WorldEditPlugin) wePlugin;
+                    // Use the plugin's API to wrap the player
+                    wePlayer = weBukkitPlugin.wrapPlayer(bukkitPlayer);
                 }
+            } catch (Exception e) {
+                plugin.getLogger().warning("Failed to get WorldEdit player: " + e.getMessage());
             }
             
-            if (wePlayer != null) {
-                int newLimit = WorldEditHandler.limitChanged(wePlayer, limit, targetName);
-                if (newLimit < -1) {
-                    event.setCancelled(true);
+            if (wePlayer == null || weBukkitPlugin == null) {
+                return; // Can't get WorldEdit player, skip
+            }
+            
+            // Check the limit through our event system
+            int newLimit = WorldEditHandler.limitChanged(wePlayer, limit, targetName);
+            
+            plugin.getLogger().info("Limit command intercepted: original=" + limit + ", newLimit=" + newLimit);
+            
+            if (newLimit < -1) {
+                // Event was cancelled or limit was invalid
+                event.setCancelled(true);
+                if (limit > 10000) {
+                    bukkitPlayer.sendMessage("§cLimit change rejected: Maximum allowed limit is 10000.");
+                } else {
                     bukkitPlayer.sendMessage("§cLimit change was cancelled.");
                 }
+                return;
+            }
+            
+            // Always cancel and set the limit manually to ensure our validation is applied
+            event.setCancelled(true);
+            
+            // Get the target session
+            com.sk89q.worldedit.session.SessionManager sessionManager = 
+                    WorldEdit.getInstance().getSessionManager();
+            com.sk89q.worldedit.LocalSession targetSession;
+            
+            if (targetName != null) {
+                // Find session for target player
+                org.bukkit.entity.Player targetBukkit = WorldEditHandler.getPlayer(targetName);
+                if (targetBukkit != null) {
+                    try {
+                        Player targetWePlayer = weBukkitPlugin.wrapPlayer(targetBukkit);
+                        if (targetWePlayer != null) {
+                            targetSession = sessionManager.get(targetWePlayer);
+                        } else {
+                            targetSession = sessionManager.get(wePlayer);
+                        }
+                    } catch (Exception e) {
+                        targetSession = sessionManager.get(wePlayer);
+                    }
+                } else {
+                    bukkitPlayer.sendMessage("§cCould not find player: " + targetName);
+                    return;
+                }
+            } else {
+                targetSession = sessionManager.get(wePlayer);
+            }
+            
+            // Set the limit directly (this is the validated/modified limit from the event)
+            targetSession.setBlockChangeLimit(newLimit);
+            
+            // Send confirmation message
+            if (newLimit != -1) {
+                bukkitPlayer.sendMessage("§aBlock change limit set to " + newLimit + ".");
+            } else {
+                bukkitPlayer.sendMessage("§aBlock change limit set to unlimited.");
             }
         }
     }
@@ -115,7 +152,37 @@ public class LimitCommandInterceptor implements Listener {
             return;
         }
         
-        String command = event.getCommand();
+        // Get command string from the event using reflection
+        // CommandEvent API varies, so we use reflection to find the correct method
+        String command = null;
+        try {
+            // Try to find a method that returns the command string
+            java.lang.reflect.Method[] methods = event.getClass().getMethods();
+            for (java.lang.reflect.Method method : methods) {
+                String methodName = method.getName().toLowerCase();
+                if ((methodName.contains("command") || methodName.equals("getcommandstring") 
+                    || methodName.equals("getcommand")) 
+                    && method.getParameterCount() == 0 
+                    && method.getReturnType() == String.class) {
+                    try {
+                        command = (String) method.invoke(event);
+                        if (command != null && !command.isEmpty()) {
+                            break;
+                        }
+                    } catch (Exception e) {
+                        // Try next method
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // Can't get command via reflection, skip this handler
+            return;
+        }
+        
+        if (command == null || command.isEmpty()) {
+            return;
+        }
+        
         java.util.regex.Matcher matcher = LIMIT_COMMAND.matcher(command);
         
         if (matcher.matches()) {

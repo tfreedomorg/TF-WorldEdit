@@ -57,14 +57,14 @@ public class WorldEditHandler {
                 player,
                 world,
                 new Vector(
-                        region.getMinimumPoint().getX(),
-                        region.getMinimumPoint().getY(),
-                        region.getMinimumPoint().getZ()
+                        region.getMinimumPoint().x(),
+                        region.getMinimumPoint().y(),
+                        region.getMinimumPoint().z()
                 ),
                 new Vector(
-                        region.getMaximumPoint().getX(),
-                        region.getMaximumPoint().getY(),
-                        region.getMaximumPoint().getZ()
+                        region.getMaximumPoint().x(),
+                        region.getMaximumPoint().y(),
+                        region.getMaximumPoint().z()
                 )
         );
         
@@ -106,7 +106,21 @@ public class WorldEditHandler {
         final LimitChangedEvent event = new LimitChangedEvent(player, target, limit);
         Bukkit.getPluginManager().callEvent(event);
         
-        return event.isCancelled() ? failCondition : event.getLimit();
+        if (event.isCancelled()) {
+            return failCondition;
+        }
+        
+        // Get the limit from the event (may have been modified by listeners)
+        int finalLimit = event.getLimit();
+        
+        // Validate the final limit - ensure it's within reasonable bounds
+        // Default max is 10000, but allow -1 for unlimited
+        if (finalLimit != -1 && (finalLimit < 1 || finalLimit > 10000)) {
+            // Limit is out of bounds, return fail condition
+            return failCondition;
+        }
+        
+        return finalLimit;
     }
     
     @SuppressWarnings("unchecked")
