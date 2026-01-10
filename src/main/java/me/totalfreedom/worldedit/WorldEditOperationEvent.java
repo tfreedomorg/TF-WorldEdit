@@ -20,15 +20,25 @@ public class WorldEditOperationEvent extends PlayerEvent implements Cancellable 
     private final Vector maxVector;
     private final OperationType operationType;
     private final String command;
+    private final SourceType sourceType;
     
     public WorldEditOperationEvent(Player player, World world, Vector minVector, Vector maxVector, 
                                    OperationType operationType, String command) {
+        this(player, world, minVector, maxVector, operationType, command, SourceType.WORLDEDIT);
+    }
+    
+    /**
+     * Constructor for Extent-based operations
+     */
+    public WorldEditOperationEvent(Player player, World world, Vector minVector, Vector maxVector, 
+                                   OperationType operationType, String command, SourceType sourceType) {
         super(player);
         this.world = world;
         this.minVector = minVector;
         this.maxVector = maxVector;
         this.operationType = operationType;
         this.command = command;
+        this.sourceType = sourceType != null ? sourceType : SourceType.WORLDEDIT;
     }
     
     public World getWorld() {
@@ -49,6 +59,10 @@ public class WorldEditOperationEvent extends PlayerEvent implements Cancellable 
     
     public String getCommand() {
         return command;
+    }
+    
+    public SourceType getSourceType() {
+        return sourceType;
     }
     
     @Override
@@ -133,6 +147,31 @@ public class WorldEditOperationEvent extends PlayerEvent implements Cancellable 
             
             return OTHER;
         }
+    }
+    
+    /**
+     * Enum representing the plugin source of the operation.
+     */
+    public enum SourceType {
+        /**
+         * WorldEdit
+         */
+        WORLDEDIT,
+        
+        /**
+         * FastAsyncWorldEdit
+         */
+        FAWE,
+        
+        /**
+         * FastAsyncVoxelSniper
+         */
+        VOXELSNIPER,
+        
+        /**
+         * Direct API usage
+         */
+        API
     }
 }
 

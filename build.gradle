@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'me.totalfreedom'
-version = '2.0.0'
+version = '2.1.0'
 sourceCompatibility = '21'
 targetCompatibility = '21'
 
@@ -20,12 +20,17 @@ repositories {
         name = 'enginehub'
         url = 'https://maven.enginehub.org/repo/'
     }
+    maven {
+        name = 'intellectualsites'
+        url = 'https://mvn.intellectualsites.com/content/groups/public/'
+    }
 }
 
 dependencies {
     compileOnly 'io.papermc.paper:paper-api:1.21.10-R0.1-SNAPSHOT'
     compileOnly 'com.sk89q.worldedit:worldedit-bukkit:7.3.10'
     compileOnly 'com.sk89q.worldedit:worldedit-core:7.3.10'
+    compileOnly 'com.fastasyncworldedit:FastAsyncWorldEdit-Core:2.12.3'
 }
 
 shadowJar {

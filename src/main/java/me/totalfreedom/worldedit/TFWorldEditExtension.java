@@ -10,18 +10,35 @@ public class TFWorldEditExtension extends JavaPlugin {
     private static TFWorldEditExtension instance;
     private SelectionChangeListener selectionListener;
     private LimitCommandInterceptor limitInterceptor;
-    private WorldEditOperationInterceptor operationInterceptor;
+    private EditSessionInterceptor editSessionInterceptor;
     private boolean worldEditReady = false;
+    
+    private boolean faweEnabled = false;
+    private boolean voxelSniperEnabled = false;
     
     @Override
     public void onEnable() {
         instance = this;
         
-        // Check if WorldEdit is loaded
-        if (!Bukkit.getPluginManager().isPluginEnabled("WorldEdit")) {
-            getLogger().severe("WorldEdit is not installed! This plugin requires WorldEdit.");
+        // Detect available plugins
+        faweEnabled = Bukkit.getPluginManager().isPluginEnabled("FastAsyncWorldEdit");
+        voxelSniperEnabled = Bukkit.getPluginManager().isPluginEnabled("FastAsyncVoxelSniper");
+        boolean worldEditEnabled = Bukkit.getPluginManager().isPluginEnabled("WorldEdit") || faweEnabled;
+        
+        if (!worldEditEnabled) {
+            getLogger().severe("Neither WorldEdit nor FastAsyncWorldEdit is installed! This plugin requires one of them.");
             Bukkit.getPluginManager().disablePlugin(this);
             return;
+        }
+        
+        if (faweEnabled) {
+            getLogger().info("FastAsyncWorldEdit detected");
+        } else if (worldEditEnabled) {
+            getLogger().info("WorldEdit detected");
+        }
+        
+        if (voxelSniperEnabled) {
+            getLogger().info("FastAsyncVoxelSniper detected");
         }
         
         getLogger().info("Waiting for WorldEdit to initialize...");
@@ -60,9 +77,10 @@ public class TFWorldEditExtension extends JavaPlugin {
         limitInterceptor = new LimitCommandInterceptor(this);
         limitInterceptor.register();
         
-        // Register operation interceptor
-        operationInterceptor = new WorldEditOperationInterceptor(this);
-        operationInterceptor.register();
+        // Register EditSession interceptor (replaces command-based interception)
+        // This catches WorldEdit, FAWE, and VoxelSniper operations
+        editSessionInterceptor = new EditSessionInterceptor(this);
+        editSessionInterceptor.register();
         
         getLogger().info("TF-WorldEdit Extension enabled!");
     }
@@ -75,8 +93,8 @@ public class TFWorldEditExtension extends JavaPlugin {
         if (limitInterceptor != null) {
             limitInterceptor.unregister();
         }
-        if (operationInterceptor != null) {
-            operationInterceptor.unregister();
+        if (editSessionInterceptor != null) {
+            editSessionInterceptor.unregister();
         }
         
         instance = null;
@@ -85,6 +103,20 @@ public class TFWorldEditExtension extends JavaPlugin {
     
     public static TFWorldEditExtension getInstance() {
         return instance;
+    }
+    
+    /**
+     * Check if FastAsyncWorldEdit is enabled.
+     */
+    public boolean isFAWE() {
+        return faweEnabled;
+    }
+    
+    /**
+     * Check if FastAsyncVoxelSniper is enabled.
+     */
+    public boolean isVoxelSniperEnabled() {
+        return voxelSniperEnabled;
     }
 }
 
